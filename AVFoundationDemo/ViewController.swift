@@ -10,8 +10,8 @@ import UIKit
 
 class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
 	let rows = [ LayerViewController.self, AnimationViewController.self, KeyframeAnimationController.self,
-		MovieController.self ]
-	let labels = [ "Layers", "Basic Animations", "Keyframe Animations", "Movie" ]
+		MovieController.self, ExportController.self ]
+	let labels = [ "Layers", "Basic Animations", "Keyframe Animations", "Movie", "Export" ]
 	override func loadView() {
  		let view = UITableView()
  		view.dataSource = self

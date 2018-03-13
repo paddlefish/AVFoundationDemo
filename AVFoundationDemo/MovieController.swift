@@ -129,6 +129,42 @@ class MovieController: UIViewController, LayerBasedDemo {
 		}
 		return self.actions
 	}
+	
+	override func viewWillDisappear(_ animated: Bool) {
+		super.viewWillDisappear(animated)
+		
+		if let player = self.player, let playerItem = player.currentItem {
+			removeObservations(playerItem: playerItem)
+		}
+	}
+	
+	override func viewWillAppear(_ animated: Bool) {
+		super.viewWillAppear(animated)
+		
+		if let player = self.player, let playerItem = player.currentItem {
+			addPlaybackObservations(playerItem: playerItem)
+		}
+	}
+	
+	func removeObservations(playerItem: AVPlayerItem) {
+		let ctr = NotificationCenter.default
+
+		ctr.removeObserver(self, name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
+		ctr.removeObserver(self, name: NSNotification.Name.AVPlayerItemTimeJumped, object: playerItem)
+		ctr.removeObserver(self, name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime, object: playerItem)
+		ctr.removeObserver(self, name: NSNotification.Name.UIApplicationWillResignActive, object: playerItem)
+		ctr.removeObserver(self, name: NSNotification.Name.UIApplicationWillEnterForeground, object: playerItem)
+	}
+	
+	func addPlaybackObservations(playerItem: AVPlayerItem) {
+		let ctr = NotificationCenter.default
+		
+		ctr.addObserver(self, selector: #selector(itemDidPlayToEnd), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
+		ctr.addObserver(self, selector: #selector(itemTimeJumped), name: NSNotification.Name.AVPlayerItemTimeJumped, object: playerItem)
+		ctr.addObserver(self, selector: #selector(itemFailedToPlayToEnd), name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime, object: playerItem)
+		ctr.addObserver(self, selector: #selector(pausePlaybackWhileInBackground), name: NSNotification.Name.UIApplicationWillResignActive, object: nil)
+		ctr.addObserver(self, selector: #selector(maybeResumePlaybackAfterEnteringForeground), name: NSNotification.Name.UIApplicationWillEnterForeground, object: nil)
+	}
 
 	override func loadView() {
 		let layerView = DemoParentLayerView()
@@ -140,11 +176,6 @@ class MovieController: UIViewController, LayerBasedDemo {
 		let playerItem = AVPlayerItem(asset: asset)
 		let player = AVPlayer(playerItem: playerItem)
 		self.player = player
-		let ctr = NotificationCenter.default
-		ctr.addObserver(self, selector: #selector(itemDidPlayToEnd), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: playerItem)
-		ctr.addObserver(self, selector: #selector(itemFailedToPlayToEnd), name: NSNotification.Name.AVPlayerItemFailedToPlayToEndTime, object: playerItem)
-		ctr.addObserver(self, selector: #selector(pausePlaybackWhileInBackground), name: NSNotification.Name.UIApplicationWillResignActive, object: nil)
-		ctr.addObserver(self, selector: #selector(maybeResumePlaybackAfterEnteringForeground), name: NSNotification.Name.UIApplicationWillEnterForeground, object: nil)
 		
 		playerLayer.player = player
 
@@ -165,6 +196,10 @@ class MovieController: UIViewController, LayerBasedDemo {
 	@objc func itemDidPlayToEnd(_ notification: Foundation.Notification) {
 		player?.seek(to: CMTime(seconds: 0, preferredTimescale: 600))
 		player?.play()
+	}
+	
+	@objc func itemTimeJumped(_ notification: Foundation.Notification) {
+		print(notification)
 	}
 	
 	@objc func itemFailedToPlayToEnd(_ notification: Foundation.Notification) {

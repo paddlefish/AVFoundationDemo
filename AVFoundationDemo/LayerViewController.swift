@@ -9,38 +9,11 @@
 import Foundation
 import UIKit
 
-class LayerViewController: UIViewController {
+class LayerViewController: UIViewController, LayerBasedDemo {
 
-	class ParentLayer: CALayer {
-		var myLayer: CALayer?
-		var nonSquare = false
-		
-		override func layoutSublayers() {
-			let parentBounds = bounds
-			let subBounds = CGRect(x: 0, y: 0, width: max(0, parentBounds.width - (nonSquare ? 100.0 : 50.0)), height: max(0, parentBounds.height - 50))
-			let anchorPoint = CGPoint(x: 0.5, y: 0.5)
-			let position = CGPoint(x: (parentBounds.minX + parentBounds.maxX) / 2.0, y: (parentBounds.minY + parentBounds.maxY) / 2.0)
-			myLayer?.anchorPoint = anchorPoint
-			myLayer?.position = position
-			myLayer?.bounds = subBounds
-			
-//			myLayer?.frame = bounds.insetBy(dx: 100, dy: 100)
-//			print(myLayer?.bounds)
-//			print(myLayer?.position)
-//			print(myLayer?.anchorPoint)
-		}
-	}
-	
-	class ParentLayerView: UIView {
-		override class var layerClass: AnyClass {
-			return ParentLayer.self
-		}
-	}
-	
-	var squareConstraint: NSLayoutConstraint!
 	var actionDelegate: ActionCollectionViewDelegate!
-	var layer: CALayer!
-	var parentLayer: ParentLayer!
+	var demoView: DemoParentLayerView!
+	var label: UILabel!
 	
 	enum Actions: Int {
 		case resizeAspectFill
@@ -79,21 +52,39 @@ class LayerViewController: UIViewController {
 			}
 		}
 		
-		var gravity: String {
+		var info: String {
 			switch self {
-				case .resizeAspect, .resizeAspectNonSquare:
-					return "resizeAspect"
-				default:
-					return "resizeAspectFill"
+				case .resizeAspectFill, .resizeAspectFillNonSquare: return "contentsGravity = kCAGravityResizeAspectFill"
+				case .resizeAspectFillNonSquareMasked: return "masksToBounds = true"
+				case .resizeAspect, .resizeAspectNonSquare: return "contentsGravity = kCAGravityResizeAspect"
+				case .rotate90: return "setAffineTransform(rotationAngle: 90))"
+				case .rotate90Masked: return "parentLayer.masksToBounds = true"
+				case .rotatePi: return "setAffineTransform(rotationAngle: CGFloat.pi))"
+				case .translate10: return "CGAffineTransform(translationX: 10, y: 10)"
+				case .translate100: return "CGAffineTransform(translationX: 100, y: 100)"
+				case .scale50: return "CGAffineTransform(scaleX: 0.5, y: 0.5)"
+				case .scale200: return "CGAffineTransform(scaleX: 2.0, y: 2.0)"
+				case .scale200ParentMasked: return "parentLayer.masksToBounds = true"
+				case .scale200Masked: return "masksToBounds = true"
+				case .skew10: return "CGAffineTransform(a: 1.0, b: 1.0, c: 0.0, d: 1.0, tx: 0.0, ty: 0.0)"
 			}
 		}
 		
-		var squareConstraintActive: Bool {
+		var gravity: String {
+			switch self {
+				case .resizeAspect, .resizeAspectNonSquare:
+					return kCAGravityResizeAspect
+				default:
+					return kCAGravityResizeAspectFill
+			}
+		}
+		
+		var nonSquare: Bool {
 			switch self {
 				case .resizeAspectFillNonSquare, .resizeAspectNonSquare, .resizeAspectFillNonSquareMasked:
-					return false
-				default:
 					return true
+				default:
+					return false
 			}
 		}
 		
@@ -152,36 +143,13 @@ class LayerViewController: UIViewController {
 	var mode: Actions = .resizeAspectFill
 	
 	var actions: [ActionCell.Action]!
-
-	@discardableResult
-	func addLayerView(toView view: UIView) -> UIView {
-		let layerView = ParentLayerView()
-		layerView.translatesAutoresizingMaskIntoConstraints = false
-
-		view.addSubview(layerView)
-
-		layerView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-		layerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 50).isActive = true
-		layerView.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -100).isActive = true
-		layerView.widthAnchor.constraint(equalTo: layerView.heightAnchor).isActive = true
-		
-		self.parentLayer = layerView.layer as! ParentLayer
-		
-		let sublayer = CALayer()
-		parentLayer.addSublayer(sublayer)
-		parentLayer.myLayer = sublayer
-
-		self.layer = sublayer
-
-		return layerView
-	}
 	
 	func setupLayer() {
 		guard let layer = self.layer else {
 			return
 		}
 		
-		parentLayer.nonSquare = !mode.squareConstraintActive
+		parentLayer.nonSquare = mode.nonSquare
 		parentLayer.setNeedsLayout()
 
 		parentLayer.borderColor = UIColor.purple.withAlphaComponent(0.2).cgColor
@@ -199,47 +167,27 @@ class LayerViewController: UIViewController {
 		layer.contentsGravity = mode.gravity
 		parentLayer.masksToBounds = mode.masksParentToBounds
 		layer.masksToBounds = mode.masksToBounds
-
 	}
 	
-	@discardableResult
-	func addActionsView(toView view: UIView, belowView: UIView, actions: [ActionCell.Action]) -> UIView {
-		let delegate = ActionCollectionViewDelegate(actions: actions)
-		
-		self.actionDelegate = delegate
-		let collectionView = delegate.setup()
-		
-		view.addSubview(collectionView)
-		
-		collectionView.topAnchor.constraint(equalTo: belowView.bottomAnchor, constant: 10).isActive = true
-		collectionView.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 10).isActive = true
-		collectionView.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -10).isActive = true
-		collectionView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10).isActive = true
-
-		return collectionView
-	}
-	
-	func setupActions() {
+	func setupActions() -> [ActionCell.Action] {
 		self.actions = Actions.all.map { action in
 			ActionCell.Action(title: action.title, action: { [weak self] in
 				self?.mode = action
+				self?.label.text = action.info
 				self?.setupLayer()
 			})
 		}
+		return self.actions
 	}
 
 	override func loadView() {
-		let view = UIView()
-		view.backgroundColor = UIColor.white
-		
-		let layerView = addLayerView(toView: view)
+		let layerView = DemoParentLayerView()
+		let views = setupDemoView(layerView: layerView)
+		self.view = views.0
+		self.demoView = views.1
+		self.actionDelegate = views.2
+		self.label = views.3
 		
 		setupLayer()
-		
-		setupActions()
-		
-		addActionsView(toView: view, belowView: layerView, actions: actions)
-		
-		self.view = view
 	}
 }

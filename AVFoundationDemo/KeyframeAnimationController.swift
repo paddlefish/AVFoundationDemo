@@ -134,21 +134,17 @@ class KeyframeAnimationController: UIViewController, LayerBasedDemo {
 
 		layer.setAffineTransform(CGAffineTransform.identity)
 		layer.contents = mode.contents
-			// Setting contents to a UIImage is not a compile error, nor a runtime error
-			// but does not work.
 		
 		layer.backgroundColor = mode.backgroundColor
 		parentLayer.masksToBounds = true
 		
-		DispatchQueue.main.async {
-			let animation = CAKeyframeAnimation(keyPath: mode.keyPath)
-			animation.values = mode.values
-			animation.keyTimes = mode.keyTimes
-			animation.duration = CFTimeInterval(1.0)
-			animation.autoreverses = false
-			animation.repeatCount = 1
-			layer.add(animation, forKey: "demo")
-		}
+		let animation = CAKeyframeAnimation(keyPath: mode.keyPath)
+		animation.values = mode.values
+		animation.keyTimes = mode.keyTimes
+		animation.duration = CFTimeInterval(1.0)
+		animation.autoreverses = false
+		animation.repeatCount = 1
+		layer.add(animation, forKey: "demo")
 	}
 	
 	func setupActions() -> [ActionCell.Action] {

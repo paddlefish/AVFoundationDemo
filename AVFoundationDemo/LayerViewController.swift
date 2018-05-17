@@ -9,6 +9,13 @@
 import Foundation
 import UIKit
 
+extension CALayer {
+	convenience init(contents: UIImage) {
+		self.init()
+		self.contents = contents.cgImage
+	}
+}
+
 class LayerViewController: UIViewController, LayerBasedDemo {
 
 	var actionDelegate: ActionCollectionViewDelegate!
@@ -31,6 +38,7 @@ class LayerViewController: UIViewController, LayerBasedDemo {
 		case scale200ParentMasked
 		case scale200Masked
 		case skew10
+		case shapeMask
 
 		var title: String {
 			switch self {
@@ -49,6 +57,7 @@ class LayerViewController: UIViewController, LayerBasedDemo {
 				case .scale200ParentMasked: return "(masked)"
 				case .scale200Masked: return "(self)"
 				case .skew10: return "skew 10"
+				case .shapeMask: return "masked"
 			}
 		}
 		
@@ -67,6 +76,7 @@ class LayerViewController: UIViewController, LayerBasedDemo {
 				case .scale200ParentMasked: return "parentLayer.masksToBounds = true"
 				case .scale200Masked: return "masksToBounds = true"
 				case .skew10: return "CGAffineTransform(a: 1.0, b: 1.0, c: 0.0, d: 1.0, tx: 0.0, ty: 0.0)"
+				case .shapeMask: return "mask = layer2"
 			}
 		}
 		
@@ -99,7 +109,7 @@ class LayerViewController: UIViewController, LayerBasedDemo {
 		
 		var masksToBounds: Bool {
 			switch self {
-				case .scale200Masked, .resizeAspectFillNonSquareMasked:
+				case .scale200Masked, .resizeAspectFillNonSquareMasked, .shapeMask:
 					return true
 				default:
 					return false
@@ -139,6 +149,15 @@ class LayerViewController: UIViewController, LayerBasedDemo {
 			}
 			return result
 		}
+		
+		var layerMask: CALayer? {
+			switch self {
+				case .shapeMask:
+					return CALayer(contents: #imageLiteral(resourceName: "mask"))
+				default:
+					return nil
+			}
+		}
 	}
 	var mode: Actions = .resizeAspectFill
 	
@@ -167,6 +186,14 @@ class LayerViewController: UIViewController, LayerBasedDemo {
 		layer.contentsGravity = mode.gravity
 		parentLayer.masksToBounds = mode.masksParentToBounds
 		layer.masksToBounds = mode.masksToBounds
+		if let layerMask = mode.layerMask {
+			layerMask.contentsGravity = kCAGravityResizeAspect
+			layerMask.anchorPoint = layer.anchorPoint
+			layerMask.frame = layer.bounds
+			layer.mask = layerMask
+		} else {
+			layer.mask = nil
+		}
 	}
 	
 	func setupActions() -> [ActionCell.Action] {

@@ -168,15 +168,14 @@ class AnimationViewController: UIViewController, LayerBasedDemo {
 		layer.masksToBounds = mode.masksToBounds
 		layer.shouldRasterize = mode.shouldRasterize
 
-		DispatchQueue.main.async {
-			let animation = CABasicAnimation(keyPath: mode.keyPath)
-			animation.fromValue = mode.fromValue
-			animation.toValue = mode.toValue
-			animation.duration = CFTimeInterval(1.0)
-			animation.autoreverses = true
-			animation.repeatCount = 1
-			layer.add(animation, forKey: "demo")
-		}
+		let animation = CABasicAnimation(keyPath: mode.keyPath)
+		animation.fromValue = mode.fromValue
+		animation.toValue = mode.toValue
+		animation.duration = CFTimeInterval(1.0)
+		animation.autoreverses = true
+		animation.repeatCount = 1
+		layer.add(animation, forKey: "demo")
+
 	}
 	
 	func setupActions() -> [ActionCell.Action] {

@@ -11,7 +11,7 @@ import UIKit
 import QuartzCore
 import AVFoundation
 
-private let PREFERRED_TIMESCALE: CMTimeScale = 600
+let PREFERRED_TIMESCALE: CMTimeScale = 600
 private let MAXIMUM_VIDEO_DURATION: Double = 30
 
 class ExportController: UIViewController {
@@ -163,6 +163,15 @@ class ExportController: UIViewController {
 	// MARK: - Animation
 	
 	func addAnimation(toLayer layer: CALayer, flipped: Bool) {
+		
+		// FIXME: actually figure out to vertically flip this animation
+		// based on flipped
+		
+		let childLayer = CALayer()
+		childLayer.frame = layer.frame.insetBy(dx: 100.0, dy: 100.0).offsetBy(dx: 60, dy: 20)
+		childLayer.contents = #imageLiteral(resourceName: "00").cgImage
+		layer.addSublayer(childLayer)
+		
 		layer.borderColor = UIColor.blue.cgColor
 		layer.borderWidth = 30
 		
@@ -297,84 +306,6 @@ class ExportController: UIViewController {
 		return time
 	}
 
-	class ExportState {
-		let startTime = CMTime.init(value: 0, timescale: PREFERRED_TIMESCALE)
-		let duration: CMTime
-		let videoSize: CGSize
-		let zeroPoint = CGPoint(x: 0, y: 0)
-		let videoRect: CGRect
-		let videoComposition = AVMutableVideoComposition()
-		let sequenceTimeRange: CMTimeRange
-		let composition = AVMutableComposition()
-		let cameraVideoTrack: AVMutableCompositionTrack
-		let cameraAudioTrack: AVMutableCompositionTrack?
-		let animationLayer = CALayer()
-		let layerInstruction: AVMutableVideoCompositionLayerInstruction
-		let instruction = AVMutableVideoCompositionInstruction()
-
-		init?(duration: CMTime, videoSize: CGSize) {
-			self.duration = duration
-			self.videoSize = videoSize
-			self.videoRect = CGRect(origin: zeroPoint, size: videoSize)
-			videoComposition.renderSize = videoSize
-			videoComposition.frameDuration = CMTimeMake(1, 30)
-			videoComposition.renderScale = 1.0
-			guard let cameraVideoTrack = composition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID:kCMPersistentTrackID_Invalid) else {
-				return nil
-			}
-			self.cameraVideoTrack = cameraVideoTrack
-			guard let cameraAudioTrack = composition.addMutableTrack(withMediaType: AVMediaType.audio, preferredTrackID:kCMPersistentTrackID_Invalid) else {
-				return nil
-			}
-			self.cameraAudioTrack = cameraAudioTrack
-
-			animationLayer.frame = CGRect(origin: zeroPoint, size: videoSize)
-			animationLayer.backgroundColor = UIColor.clear.cgColor
-
-			self.layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: cameraVideoTrack)
-
-			sequenceTimeRange = CMTimeRangeMake(kCMTimeZero, duration)
-		}
-		
-		func release() {
-//			just here so we have a way to retain all those objects
-//			until export is done
-		}
-		
-		func toPlayerItemAndLayer() -> (AVPlayerItem, CALayer) {
-			instruction.layerInstructions = [layerInstruction]
-			instruction.timeRange = sequenceTimeRange
-
-			videoComposition.instructions = [instruction]
-
-			let videoCompositionCopy = videoComposition
-			let compositionCopy = composition
-			let animationLayerCopy = animationLayer
-
-			let playerItem = AVPlayerItem(asset: compositionCopy)
-			playerItem.videoComposition = videoCompositionCopy
-			playerItem.forwardPlaybackEndTime = duration
-			
-			return (playerItem, animationLayerCopy)
-		}
-		
-		func setupForExport() {
-			_ = toPlayerItemAndLayer()
-			let parentLayer = CALayer()
-			parentLayer.frame = videoRect
-			let videoLayer = CALayer()
-			videoLayer.frame = videoRect
-			animationLayer.isGeometryFlipped = true
-			animationLayer.frame = videoRect
-			
-			parentLayer.addSublayer(videoLayer)
-			parentLayer.addSublayer(animationLayer)
-			
-			let myAnimationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: videoLayer, in: parentLayer)
-			 videoComposition.animationTool = myAnimationTool
-		}
-	}
-	
 	private func buildExportState(size videoSize: CGSize, mediaUrl: URL, flipped: Bool) -> ExportState? {
 		guard let exportState = ExportState(duration: duration, videoSize: videoSize) else {
 			return nil
